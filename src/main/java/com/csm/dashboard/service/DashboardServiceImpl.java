@@ -3,6 +3,7 @@ package com.csm.dashboard.service;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -11,11 +12,10 @@ import org.springframework.stereotype.Service;
 
 import com.csm.dashboard.dao.DashboardDAOImpl;
 import com.csm.dashboard.dao.UserRepository;
-import com.csm.dashboard.exception.UnathorizedException;
 import com.csm.dashboard.model.CSMUser;
+import com.csm.dashboard.model.Consumption;
 import com.csm.dashboard.model.PeriodicUsage;
 import com.csm.dashboard.model.UsageBean;
-import com.csm.dashboard.model.UsageData;
 
 @Service
 public class DashboardServiceImpl implements DashboardService{
@@ -31,11 +31,10 @@ public class DashboardServiceImpl implements DashboardService{
 		/* Fetch FYOverallCloudConsumption Start*/
 			double trueUsage = 0.0;
 			double totalUsage = 0.0;
-			List<UsageData> listUsageData = dashboardDAO.getAllUsageDataStarter();
-			for(UsageData object : listUsageData) {
-				trueUsage+=object.getTrueUsage();
-				if(object.getId()==1)
-					totalUsage = (double) object.getOverallUsageTarget();
+			List<Consumption> listUsageData = dashboardDAO.getAllUsageDataStarter();
+			for(Consumption object : listUsageData) {
+				trueUsage+=object.getTRUE_USAGE();
+				totalUsage = (double) object.getOVERALL_USAGE_TARGET();
 			}
 			List<Double> list = new ArrayList<Double>();
 			list.add(trueUsage);
@@ -128,18 +127,15 @@ public class DashboardServiceImpl implements DashboardService{
 				else if (j==1){
 				    BigDecimal valueBigDecimal = (BigDecimal) arr[j];
 				    lobValue = valueBigDecimal.doubleValue();
-//				    bean.setActual(new DecimalFormat("##.##").format(lobValue/1000000)+"M");
 				    bean.setActual(lobValue+"");
 				}
 				else if (j==2){
 				    BigDecimal valueBigDecimal = (BigDecimal) arr[j];
 				    lobTarget = valueBigDecimal.doubleValue();
-//				    bean.setTarget((int)(lobTarget/1000000)+"M");
 				    bean.setTarget((lobTarget)+"");
 				}				
 			}
 			finalProductList.add(bean);
-//			lobMap.put(key, Math.round(lobValue*10.0)/10.0);
 		}
 		return finalProductList;
 	}
@@ -162,13 +158,9 @@ public class DashboardServiceImpl implements DashboardService{
 				else if (j==1){
 				    BigDecimal valueBigDecimal = (BigDecimal) arr[j];
 				    productValue = valueBigDecimal.doubleValue();
-//				    bean.setActual(new DecimalFormat("##.##").format(productValue/1000000)+"M");
 				    bean.setActual(productValue+"");
-
-
 				}
 			}
-//			productsMap.put(key, Math.round(productValue*10.0)/10.0);
 			if (Double.parseDouble(bean.getActual()) > 0)
 				finalProductList.add(bean);
 		}
@@ -180,16 +172,20 @@ public class DashboardServiceImpl implements DashboardService{
 			List<PeriodicUsage> quaterlyList = getQuaterlyData();
 			List<PeriodicUsage> monthlyList = getMonthlyData();
 			List<PeriodicUsage> weeklyList = getWeeklyData();
+			List<PeriodicUsage> yearlyList = getYearlyData();
 			HashMap<String, List> quaterDataMap = new HashMap<String, List>();
 			HashMap<String, List> monthDataMap = new HashMap<String, List>();
 			HashMap<String, List> weekDataMap = new HashMap<String, List>();
+			HashMap<String, List> yearDataMap = new HashMap<String, List>();
 			HashMap<String, Object> periodicDataMap = new HashMap<String, Object>();
 			quaterDataMap.put("data", quaterlyList);
 			monthDataMap.put("data", monthlyList);
 			weekDataMap.put("data", weeklyList);
+			yearDataMap.put("data", yearlyList);
 			periodicDataMap.put("quater", quaterDataMap);
 			periodicDataMap.put("week", weekDataMap);
 			periodicDataMap.put("month", monthDataMap);
+			periodicDataMap.put("year", yearDataMap);
 			return periodicDataMap;
 	}
 
@@ -209,13 +205,22 @@ public class DashboardServiceImpl implements DashboardService{
 				else if (j==1){
 				    BigDecimal valueBigDecimal = (BigDecimal) arr[j];
 				    weeklyValue = valueBigDecimal.doubleValue();
-//				    bean.setValue((new DecimalFormat("##.##").format(weeklyValue/1000000)+"M"));
 				    bean.setValue(weeklyValue+"");
 				}
 			}
 			finalWeekList.add(bean);
 		}
 		return finalWeekList;
+	}
+
+	private List<PeriodicUsage> getYearlyData() {
+		double yearlyVal =  (double) dashboardDAO.getYearly();
+		List<PeriodicUsage> finalYearList=new ArrayList<>();
+		PeriodicUsage bean=new PeriodicUsage();
+		bean.setName("FY-19");
+		bean.setValue(yearlyVal+"");
+		finalYearList.add(bean);
+		return finalYearList;
 	}
 
 	private List<PeriodicUsage> getMonthlyData() {
@@ -237,7 +242,6 @@ public class DashboardServiceImpl implements DashboardService{
 				else if (j==1){
 				    BigDecimal valueBigDecimal = (BigDecimal) arr[j];
 				    monthlyValue = valueBigDecimal.doubleValue();
-//				    bean.setValue((new DecimalFormat("##.##").format(monthlyValue/1000000)+"M"));
 				    bean.setValue(monthlyValue+"");
 				}
 			}
@@ -266,22 +270,26 @@ public class DashboardServiceImpl implements DashboardService{
 				else if (j==1){
 				    BigDecimal valueBigDecimal = (BigDecimal) arr[j];
 				    quaterlyValue = valueBigDecimal.doubleValue();
-//				    bean.setValue((new DecimalFormat("##.##").format(quaterlyValue/1000000)+"M"));
 				    bean.setValue(quaterlyValue+"");
 				}
 			}
 			finalQuaterList.add(bean);
 		}
-		for(int i=3; i<5; i++){
-			PeriodicUsage bean=new PeriodicUsage();
-			bean.setName("Q"+i);
-			bean.setValue("0");
-			finalQuaterList.add(bean);
-		}
+
+		/*Set quarters values to 0 which are not present--if query is fetching Q3,Q4..we need to send all quaters data
+		in this case; Q1 and Q2 will be defined and set to 0 as part of json*/
+			List<PeriodicUsage> dummyList = Arrays.asList(new PeriodicUsage("Q1", "0"), new PeriodicUsage("Q2", "0"),
+					new PeriodicUsage("Q3", "0"), new PeriodicUsage("Q4", "0"));
+			for(PeriodicUsage dummy:dummyList){
+				if(!finalQuaterList.contains(dummy)){
+					finalQuaterList.add(dummy);
+				}
+			}
 		
 		return finalQuaterList;
 	}
 	
+	//validates session key that gets sent everytime in api reuqest--currently not being used
 	private boolean isAuthorized (String authKeyValue) {
 		System.out.println("authKey "+authKeyValue);
 		List<CSMUser> userList = userRepository.findAll();

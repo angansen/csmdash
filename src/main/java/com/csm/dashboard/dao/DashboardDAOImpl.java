@@ -1,5 +1,6 @@
 package com.csm.dashboard.dao;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import javax.persistence.EntityManager;
@@ -9,7 +10,7 @@ import javax.persistence.Query;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-import com.csm.dashboard.model.UsageData;
+import com.csm.dashboard.model.Consumption;
 
 @Repository
 public class DashboardDAOImpl implements DashboardDAO{
@@ -19,7 +20,7 @@ public class DashboardDAOImpl implements DashboardDAO{
 	@Autowired
 	private DashboardRepository dashboardRepositoryInstance;
 
-	public List<UsageData> getAllUsageDataStarter() {
+	public List<Consumption> getAllUsageDataStarter() {
 		return dashboardRepositoryInstance.findAll();
 	}
 
@@ -39,9 +40,15 @@ public class DashboardDAOImpl implements DashboardDAO{
 
 	@Override
 	public List<Object[]> getProducts() {
-//		Query query = entityManager.createNativeQuery("SELECT CHILD_TIER, sum(TRUE_USAGE) AS ACTUAL_PRODUCT FROM USAGE_DATA GROUP BY CHILD_TIER ORDER BY ACTUAL_PRODUCT DESC");
-		Query query = entityManager.createNativeQuery("SELECT CHILD_TIER, sum(TRUE_USAGE) FROM USAGE_DATA  where CHILD_TIER NOT LIKE 'Autonomous%' GROUP BY CHILD_TIER UNION SELECT 'Autonomous', sum(TRUE_USAGE) "
-														+ "AS Autonomous FROM USAGE_DATA WHERE CHILD_TIER LIKE 'Autonomous%' ORDER BY 2 DESC");
+//		Query query = entityManager.createNativeQuery("SELECT CHILD_TIER, sum(TRUE_USAGE) FROM USAGE_DATA  where CHILD_TIER NOT LIKE 'Autonomous%' GROUP BY CHILD_TIER UNION SELECT 'Autonomous', sum(TRUE_USAGE) "
+//														+ "AS Autonomous FROM USAGE_DATA WHERE CHILD_TIER LIKE 'Autonomous%' ORDER BY 2 DESC");
+		Query query = entityManager.createNativeQuery("SELECT CHILD_TIER, sum(TRUE_USAGE) FROM USAGE_DATA  where CHILD_TIER"+ 
+" NOT LIKE 'Autonomous%' GROUP BY CHILD_TIER UNION" + 
+" SELECT 'Autonomous ADW '||'&'||' ATP', sum(TRUE_USAGE)" +
+" FROM USAGE_DATA WHERE CHILD_TIER LIKE 'Autonomous ADW '||'&'||' ATP%'" +
+" UNION SELECT 'Autonomous Other Services', sum(TRUE_USAGE)" +
+" FROM USAGE_DATA WHERE CHILD_TIER LIKE 'Autonomous Other Services%'"+
+" ORDER BY 2 DESC");
 		List<Object[]> results = query.getResultList();
 		return results;
 	}
@@ -66,4 +73,16 @@ public class DashboardDAOImpl implements DashboardDAO{
 		List<Object[]> results = query.getResultList();
 		return results;	
 	}
+
+	public Object getYearly() {
+		Query query = entityManager.createNativeQuery("select sum(true_usage) from usage_data");
+		BigDecimal result = (BigDecimal) query.getSingleResult();
+		return result.doubleValue();	
+	}
+
+//	public List<Object[]> getYearly() {
+//		Query query = entityManager.createNativeQuery("select sum(true_usage) from usage_data");
+//		List<Object[]> results = query.getResultList();
+//		return results;	
+//	}
 }
